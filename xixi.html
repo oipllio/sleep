@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>手机安全实时体检</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #020617;
+      color: #e5e7eb;
+      overflow: hidden;
+    }
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      box-sizing: border-box;
+      transition: opacity .4s, transform .4s;
+    }
+    .hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(.9);
+    }
+    .title {
+      font-size: 1.4rem;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .subtitle {
+      font-size: 0.9rem;
+      opacity: 0.8;
+      text-align: center;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+    .badge {
+      font-size: 0.7rem;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(248,250,252,0.1);
+      margin-bottom: 16px;
+      opacity: 0.7;
+    }
+    .progress-wrapper {
+      width: 100%;
+      max-width: 360px;
+      background: #020617;
+      border-radius: 999px;
+      border: 1px solid #1f2937;
+      padding: 4px;
+      box-shadow: 0 0 20px rgba(15,23,42,0.6);
+    }
+    .progress-bar {
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #22c55e, #a3e635);
+      width: 0%;
+      transition: width 0.15s linear;
+    }
+    .percent {
+      margin-top: 8px;
+      font-size: 0.9rem;
+      text-align: right;
+      opacity: 0.8;
+    }
+    .warning {
+      color: #fecaca;
+    }
+
+    .screen-warning {
+      background: #111827;
+      color: #fee2e2;
+    }
+    .screen-warning::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top, #7f1d1d33, transparent);
+      pointer-events: none;
+    }
+    .big-alert {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .danger-text {
+      font-size: 0.9rem;
+      text-align: center;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+    .btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 24px;
+      border-radius: 999px;
+      border: none;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      background: linear-gradient(135deg, #f97316, #ef4444);
+      color: #ffffff;
+      box-shadow: 0 10px 25px rgba(248,113,113,0.4);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn:active {
+      transform: scale(0.96) translateY(1px);
+      box-shadow: 0 4px 10px rgba(248,113,113,0.4);
+    }
+    .shake {
+      animation: shake 0.4s infinite;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translate(0, 0); }
+      25% { transform: translate(-4px, 1px); }
+      50% { transform: translate(3px, -2px); }
+      75% { transform: translate(-2px, 3px); }
+    }
+
+    .screen-final {
+      background: radial-gradient(circle at top, #38bdf8, #a855f7, #0f172a);
+    }
+    .final-card {
+      background: rgba(15,23,42,0.75);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 18px 45px rgba(15,23,42,0.8);
+      backdrop-filter: blur(18px);
+      max-width: 380px;
+      text-align: center;
+    }
+    .final-title {
+      font-size: 1.4rem;
+      margin-bottom: 8px;
+    }
+    .final-text {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .chip {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.7);
+      border: 1px solid rgba(148,163,184,0.5);
+    }
+    .btn-secondary {
+      margin-top: 8px;
+      background: transparent;
+      border: 1px solid rgba(148,163,184,0.7);
+      box-shadow: none;
+      color: #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <!-- 扫描界面 -->
+  <div class="screen" id="screen-scan">
+    <div class="badge">系统安全中心 · 手机实时体检</div>
+    <div class="title">正在深度扫描你的手机…</div>
+    <div class="subtitle" id="scan-text">
+      正在分析应用行为、照片、聊天记录… 请勿退出页面。
+    </div>
+    <div class="progress-wrapper">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="percent" id="percent">0%</div>
+  </div>
+
+  <!-- 严重警告界面 -->
+  <div class="screen screen-warning hidden" id="screen-warning">
+    <div class="big-alert shake">严重警告</div>
+    <div class="danger-text" id="danger-text">
+      已检测到 <span class="warning">多项高危风险</span>，你的隐私可能正在被泄露。<br>
+      建议立刻进行紧急修复！
+    </div>
+    <button class="btn shake" id="fix-btn">立即一键修复</button>
+  </div>
+
+  <!-- 真相界面 -->
+  <div class="screen screen-final hidden" id="screen-final">
+    <div class="final-card">
+      <div class="final-title">骗你的啦 😝</div>
+      <div class="final-text">
+        这只是朋友给你准备的一个 <span class="warning">网页小恶作剧</span>。<br><br>
+        它不会真的扫描、读取或修改你的手机，只是前端动画效果，放心~
+      </div>
+      <div class="chip-row">
+        <div class="chip">纯前端动画</div>
+        <div class="chip">不读取隐私</div>
+        <div class="chip">不改设置</div>
+        <div class="chip">只负责吓你一下</div>
+      </div>
+      <button class="btn" id="again-btn">再玩一次</button>
+      <button class="btn btn-secondary" id="share-tip">教我也做一个</button>
+    </div>
+  </div>
+
+  <script>
+    const screenScan   = document.getElementById('screen-scan');
+    const screenWarn   = document.getElementById('screen-warning');
+    const screenFinal  = document.getElementById('screen-final');
+    const bar          = document.getElementById('progress-bar');
+    const percentText  = document.getElementById('percent');
+    const scanText     = document.getElementById('scan-text');
+    const fixBtn       = document.getElementById('fix-btn');
+    const dangerText   = document.getElementById('danger-text');
+    const againBtn     = document.getElementById('again-btn');
+    const shareBtn     = document.getElementById('share-tip');
+
+    let progress   = 0;
+    let scanTimer  = null;
+    let dodgeCount = 0;
+
+    function vibrate(pattern) {
+      if (navigator.vibrate) {
+        navigator.vibrate(pattern);
+      }
+    }
+
+    function startScan() {
+      progress   = 0;
+      dodgeCount = 0;
+      bar.style.width = '0%';
+      percentText.textContent = '0%';
+      scanText.textContent = '正在分析应用行为、照片、聊天记录… 请勿退出页面。';
+
+      screenScan.classList.remove('hidden');
+      screenWarn.classList.add('hidden');
+      screenFinal.classList.add('hidden');
+
+      if (scanTimer) clearInterval(scanTimer);
+
+      scanTimer = setInterval(() => {
+        const step = progress < 70 ? Math.random() * 3 + 1 : Math.random() * 2;
+        progress = Math.min(100, progress + step);
+        const display = Math.round(progress);
+
+        bar.style.width = display + '%';
+        percentText.textContent = display + '%';
+
+        if (display > 25 && display <= 50) {
+          scanText.textContent = '检测到可疑应用 3 个，正在进一步分析风险级别…';
+        } else if (display > 50 && display <= 80) {
+          scanText.textContent = '正在比对云端安全数据库… 发现多条异常网络连接记录。';
+        } else if (display > 80 && display < 100) {
+          scanText.textContent = '风险级别：极高！正在准备修复方案…';
+        }
+
+        if (display === 100) {
+          clearInterval(scanTimer);
+          setTimeout(showWarning, 800);
+        }
+      }, 120);
+    }
+
+    function showWarning() {
+      screenScan.classList.add('hidden');
+      screenWarn.classList.remove('hidden');
+      vibrate([120, 80, 120, 80, 200]);
+    }
+
+    function moveButtonRandom() {
+      const margin = 16;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const btnRect = fixBtn.getBoundingClientRect();
+
+      const maxX = vw - btnRect.width - margin;
+      const maxY = vh - btnRect.height - margin;
+      const x = Math.random() * maxX + margin / 2;
+      const y = Math.random() * maxY + margin / 2;
+
+      fixBtn.style.position = 'fixed';
+      fixBtn.style.left = x + 'px';
+      fixBtn.style.top  = y + 'px';
+    }
+
+    fixBtn.addEventListener('click', (e) => {
+      dodgeCount++;
+      if (dodgeCount <= 3) {
+        e.preventDefault();
+        dangerText.innerHTML = '风险仍在增加中… <span class="warning">请再次尝试修复</span>！';
+        moveButtonRandom();
+        vibrate([80, 40, 80]);
+      } else {
+        revealPrank();
+      }
+    });
+
+    function revealPrank() {
+      screenWarn.classList.add('hidden');
+      screenFinal.classList.remove('hidden');
+      vibrate([60, 40, 60, 40, 60]);
+    }
+
+    againBtn.addEventListener('click', () => {
+      fixBtn.style.position = 'relative';
+      fixBtn.style.left = '';
+      fixBtn.style.top  = '';
+      startScan();
+    });
+
+    shareBtn.addEventListener('click', () => {
+      alert('你只要把这个 HTML 文件发给朋友，或传到 GitHub Pages，让 TA 打开链接就能玩啦～');
+    });
+
+    // 进入页面自动开始扫描
+    startScan();
+  </script>
+</body>
+</html>
