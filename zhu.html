@@ -2,7 +2,9 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>弹幕花海小猪认证现场</title>
+  <title>??????????</title>
+  <meta name="description" content="???????????????????????????" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{
@@ -74,43 +76,43 @@
     <div id="flower-container"></div>
 
     <div class="center-panel">
-      <!-- 名字由 JS 自动填充 -->
-      <button id="btnPig"><span id="namePig"></span>是猪 🐷</button>
-      <div id="copy"></div>
+      <!-- ??? JS ???? -->
+      <button id="btnPig" type="button"><span id="namePig"></span>?? ??</button>
+      <div id="copy" role="status" aria-live="polite"></div>
     </div>
 
-    <button id="btnNotPig"><span id="nameNotPig"></span>不是猪 😼</button>
+    <button id="btnNotPig" type="button"><span id="nameNotPig"></span>??? ??</button>
   </div>
 
   <div id="fireworks"></div>
-  <div id="msgOverlay">猪猪不乖哟～</div>
+  <div id="msgOverlay" role="status" aria-live="polite">??????</div>
 
   <script>
-    // ★ 只要改这一行，就能把所有“XXX是猪”换成别的名字
-    const NAME = "潘翔";  // 比如改成 "阿波"、"XX"
+    // ? ?????????????XXX?????????
+    const NAME = "??";  // ???? "??"?"XX"
 
-    // 用模板字符串，统一替换名字
+    // ?????????????
     const danmakuTemplates = [
-      "${NAME}这个小笨猪！",
-      "${NAME}，宇宙级大猪蹄子～",
-      "谁家猪这么可爱，哦是${NAME}。",
-      "${NAME}，在线卖萌又犯蠢！",
-      "今日份猪猪是：${NAME} ✔",
-      "${NAME}这只小脑袋瓜猪猪。",
-      "全场最猪：${NAME}（可爱那种）",
-      "${NAME}，别装了，你就是小猪猪！",
-      "${NAME}=猪猪+笨蛋+可爱×3"
+      "${NAME}??????",
+      "${NAME}?????????",
+      "??????????${NAME}?",
+      "${NAME}?????????",
+      "???????${NAME} ?",
+      "${NAME}?????????",
+      "?????${NAME}??????",
+      "${NAME}????????????",
+      "${NAME}=??+??+???3"
     ];
 
     const copyTemplates = [
-      "认证完成：${NAME}正式被评为“今日最可爱小猪猪”🐷✨",
-      "系统提示：${NAME}猪猪身份锁定～",
-      "宇宙公告：${NAME}，这只小猪已经被公开夸！",
-      "检测结果：${NAME}猪含量 100%。",
-      "恭喜${NAME}，成功解锁成就：小猪本猪。"
+      "?????${NAME}??????????????????",
+      "?????${NAME}???????",
+      "?????${NAME}????????????",
+      "?????${NAME}??? 100%?",
+      "??${NAME}?????????????"
     ];
 
-    // 把模板里的 ${NAME} 全部替换成真正名字
+    // ????? ${NAME} ?????????
     const danmakuTexts = danmakuTemplates.map(t => t.replaceAll("${NAME}", NAME));
     const copyTexts = copyTemplates.map(t => t.replaceAll("${NAME}", NAME));
 
@@ -124,7 +126,7 @@
     const namePigSpan=document.getElementById("namePig");
     const nameNotPigSpan=document.getElementById("nameNotPig");
 
-    // 把按钮上的名字也替换掉
+    // ???????????
     namePigSpan.textContent = NAME;
     nameNotPigSpan.textContent = NAME;
 
@@ -143,7 +145,7 @@
     function createFlower(){
       const s=document.createElement("span");
       s.className="flower";
-      s.textContent=Math.random()>0.5?"❤":"✿";
+      s.textContent=Math.random()>0.5?"?":"?";
       s.style.left=Math.random()*100+"vw";
       s.style.animationDuration=8+Math.random()*10+"s";
       flowerContainer.appendChild(s);

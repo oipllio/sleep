@@ -2,7 +2,8 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>出来玩嘛～</title>
+  <title>?????</title>
+  <meta name="description" content="???????????????????" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -75,49 +76,53 @@
       .danmaku{font-size:14px;}
       .center-panel{padding:18px 16px;}
     }
+    @media (prefers-reduced-motion:reduce){
+      button{transition:none;}
+      .danmaku,.flower,.particle{animation-duration:.01ms!important;}
+    }
   </style>
 </head>
 <body>
-  <div class="background">
+  <main class="background" aria-labelledby="page-title">
     <div id="danmaku-container"></div>
     <div id="flower-container"></div>
 
     <div class="center-panel">
-      <div class="title">出来玩嘛～</div>
-      <div class="hint">怎么说：去 / 不去</div>
+      <div class="title" id="page-title">?????</div>
+      <div class="hint">????? / ??</div>
       <div class="btn-row">
-        <button id="btnGo">去 ✅</button>
+        <button id="btnGo" type="button" aria-label="?????">? ?</button>
       </div>
-      <div id="copy"></div>
+      <div id="copy" role="status" aria-live="polite"></div>
     </div>
 
-    <button id="btnNo">不去 ❌</button>
-  </div>
+    <button id="btnNo" type="button" aria-label="????">?? ?</button>
+  </main>
 
   <div id="fireworks"></div>
-  <div id="msgOverlay">出来玩啦～</div>
+  <div id="msgOverlay" role="status" aria-live="polite">?????</div>
 
   <script>
     const danmakuTexts=[
-      "出来玩啊，今天风超温柔！","走走走，出来逛街喝奶茶！",
-      "别宅了，一起去吹晚风～","今晚一起吃好吃的吗？我请！",
-      "出来散个步，顺便八卦一下～","等你出来给我看脸！",
-      "手机先放下，我们出去乱逛！","来嘛来嘛，一起去夜市嗨一下！",
-      "今天的夕阳只对出门的人开放～","出去转一圈，心情会好超多的！"
+      "????????????","????????????",
+      "???????????","?????????????",
+      "?????????????","?????????",
+      "?????????????","??????????????",
+      "??????????????","??????????????"
     ];
     const goCopyTexts=[
-      "已确认：今天一起出去浪一圈～🎉",
-      "出门预约成功，等你收拾一下！",
-      "那就约好啦，不许鸽！",
-      "出门任务创建成功：一起乱逛+乱聊！",
-      "收到！今天的快乐活动：和你一起走走。"
+      "????????????????",
+      "??????????????",
+      "??????????",
+      "?????????????+???",
+      "??????????????????"
     ];
     const persuadeTexts=[
-      "别装啦，你明明想出去玩～",
-      "就陪我走两步嘛好不好～",
-      "今天好天气不出去太可惜了！",
-      "再点“不去”你就默认想出门哦～",
-      "出去走走，快乐会加倍！"
+      "????????????",
+      "???????????",
+      "?????????????",
+      "???????????????",
+      "???????????"
     ];
 
     const danmakuContainer=document.getElementById("danmaku-container");
@@ -127,6 +132,7 @@
     const btnNo=document.getElementById("btnNo");
     const copyBox=document.getElementById("copy");
     const msgOverlay=document.getElementById("msgOverlay");
+    const reducedMotion=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     function createDanmaku(){
       const s=document.createElement("span");
@@ -138,20 +144,21 @@
       danmakuContainer.appendChild(s);
       s.addEventListener("animationend",()=>s.remove());
     }
-    setInterval(createDanmaku,400);
+    if(!reducedMotion) setInterval(createDanmaku,400);
 
     function createFlower(){
       const s=document.createElement("span");
       s.className="flower";
-      s.textContent=Math.random()>0.5?"❤":"✿";
+      s.textContent=Math.random()>0.5?"?":"?";
       s.style.left=Math.random()*100+"vw";
       s.style.animationDuration=8+Math.random()*10+"s";
       flowerContainer.appendChild(s);
       setTimeout(()=>s.remove(),10000);
     }
-    setInterval(createFlower,500);
+    if(!reducedMotion) setInterval(createFlower,500);
 
     function fireworksLaunch(x,y){
+      if(reducedMotion) return;
       for(let i=0;i<40;i++){
         const p=document.createElement("div");
         p.className="particle";

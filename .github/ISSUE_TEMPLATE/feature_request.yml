@@ -1,0 +1,39 @@
+name: Feature request
+description: Suggest an improvement or new learning example.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What should improve?
+      description: Explain the current limitation or learning gap.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Describe the change you would like to see.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Accessibility
+        - Animation
+        - Documentation
+        - Copywriting
+        - Mobile layout
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      description: Add screenshots, examples, or related links if helpful.
+    validations:
+      required: false

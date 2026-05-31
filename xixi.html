@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>手机安全实时体检</title>
+  <title>????????</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     html, body {
@@ -177,12 +177,12 @@
   </style>
 </head>
 <body>
-  <!-- 扫描界面 -->
+  <!-- ???? -->
   <div class="screen" id="screen-scan">
-    <div class="badge">系统安全中心 · 手机实时体检</div>
-    <div class="title">正在深度扫描你的手机…</div>
+    <div class="badge">?????? ? ??????</div>
+    <div class="title">???????????</div>
     <div class="subtitle" id="scan-text">
-      正在分析应用行为、照片、聊天记录… 请勿退出页面。
+      ????????????????? ???????
     </div>
     <div class="progress-wrapper">
       <div class="progress-bar" id="progress-bar"></div>
@@ -190,32 +190,32 @@
     <div class="percent" id="percent">0%</div>
   </div>
 
-  <!-- 严重警告界面 -->
+  <!-- ?????? -->
   <div class="screen screen-warning hidden" id="screen-warning">
-    <div class="big-alert shake">严重警告</div>
+    <div class="big-alert shake">????</div>
     <div class="danger-text" id="danger-text">
-      已检测到 <span class="warning">多项高危风险</span>，你的隐私可能正在被泄露。<br>
-      建议立刻进行紧急修复！
+      ???? <span class="warning">??????</span>?????????????<br>
+      ???????????
     </div>
-    <button class="btn shake" id="fix-btn">立即一键修复</button>
+    <button class="btn shake" id="fix-btn">??????</button>
   </div>
 
-  <!-- 真相界面 -->
+  <!-- ???? -->
   <div class="screen screen-final hidden" id="screen-final">
     <div class="final-card">
-      <div class="final-title">骗你的啦 😝</div>
+      <div class="final-title">???? ??</div>
       <div class="final-text">
-        这只是朋友给你准备的一个 <span class="warning">网页小恶作剧</span>。<br><br>
-        它不会真的扫描、读取或修改你的手机，只是前端动画效果，放心~
+        ???????????? <span class="warning">??????</span>?<br><br>
+        ?????????????????????????????~
       </div>
       <div class="chip-row">
-        <div class="chip">纯前端动画</div>
-        <div class="chip">不读取隐私</div>
-        <div class="chip">不改设置</div>
-        <div class="chip">只负责吓你一下</div>
+        <div class="chip">?????</div>
+        <div class="chip">?????</div>
+        <div class="chip">????</div>
+        <div class="chip">???????</div>
       </div>
-      <button class="btn" id="again-btn">再玩一次</button>
-      <button class="btn btn-secondary" id="share-tip">教我也做一个</button>
+      <button class="btn" id="again-btn">????</button>
+      <button class="btn btn-secondary" id="share-tip">??????</button>
     </div>
   </div>
 
@@ -246,7 +246,7 @@
       dodgeCount = 0;
       bar.style.width = '0%';
       percentText.textContent = '0%';
-      scanText.textContent = '正在分析应用行为、照片、聊天记录… 请勿退出页面。';
+      scanText.textContent = '????????????????? ???????';
 
       screenScan.classList.remove('hidden');
       screenWarn.classList.add('hidden');
@@ -263,11 +263,11 @@
         percentText.textContent = display + '%';
 
         if (display > 25 && display <= 50) {
-          scanText.textContent = '检测到可疑应用 3 个，正在进一步分析风险级别…';
+          scanText.textContent = '??????? 3 ??????????????';
         } else if (display > 50 && display <= 80) {
-          scanText.textContent = '正在比对云端安全数据库… 发现多条异常网络连接记录。';
+          scanText.textContent = '???????????? ?????????????';
         } else if (display > 80 && display < 100) {
-          scanText.textContent = '风险级别：极高！正在准备修复方案…';
+          scanText.textContent = '?????????????????';
         }
 
         if (display === 100) {
@@ -303,7 +303,7 @@
       dodgeCount++;
       if (dodgeCount <= 3) {
         e.preventDefault();
-        dangerText.innerHTML = '风险仍在增加中… <span class="warning">请再次尝试修复</span>！';
+        dangerText.textContent = '???????? ????????';
         moveButtonRandom();
         vibrate([80, 40, 80]);
       } else {
@@ -325,10 +325,10 @@
     });
 
     shareBtn.addEventListener('click', () => {
-      alert('你只要把这个 HTML 文件发给朋友，或传到 GitHub Pages，让 TA 打开链接就能玩啦～');
+      alert('?????? HTML ?????????? GitHub Pages?? TA ?????????');
     });
 
-    // 进入页面自动开始扫描
+    // ??????????
     startScan();
   </script>
 </body>
