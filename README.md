@@ -4,6 +4,8 @@ Sleep is a small, dependency-free collection of interactive Chinese static pages
 
 Live demo: https://oipllio.github.io/sleep/
 
+Environmental lab calculator: https://oipllio.github.io/sleep/water-lab/
+
 ## Why This Project Exists
 
 Many beginners learn frontend development by modifying small static pages before they are ready for build tools, package managers, or frameworks. Sleep keeps the source easy to inspect and remix, so learners can understand how browser APIs, DOM updates, animation, responsive layout, and GitHub Pages hosting work in one public example.
@@ -19,12 +21,18 @@ This repository is not distributed as an npm/PyPI package, so monthly package do
 - Floating decorative effects and click fireworks
 - Playful confirmation flow with keyboard-accessible buttons
 - Reduced-motion support for users who prefer less animation
+- Browser-side calculator for COD, ammonia nitrogen, total phosphorus, noise Leq, calibration curves, R?, concentration conversion, result tables, conclusions, and CSV / Markdown export
 
 ## Project Structure
 
 ```text
 .
 |-- index.html
+|-- water-lab/
+|   |-- index.html
+|   |-- styles.css
+|   |-- app.js
+|   `-- assets/
 |-- 1_panjun_danmaku_fixed.html
 |-- xixi.html
 |-- zhu.html
@@ -49,6 +57,8 @@ python -m http.server 8000
 ```
 
 Then open `http://localhost:8000/`.
+
+The lab calculator is available at `http://localhost:8000/water-lab/`.
 
 ## Quality Checks
 

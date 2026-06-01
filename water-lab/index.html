@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="COD????????? Leq ????????????????????? CSV ? Markdown?" />
+  <title>???????????</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <img class="hero__image" src="./assets/anime-lab-hero.png" alt="??????????????????????????" />
+    <div class="hero__shade" aria-hidden="true"></div>
+    <div class="hero__content">
+      <p class="eyebrow">Open Source Lab Tool</p>
+      <h1>???????????</h1>
+      <p class="hero__summary">COD????????? Leq??????????????????</p>
+      <div class="hero__badges" aria-label="????">
+        <span>???????</span>
+        <span>CSV / Markdown</span>
+        <span>GitHub Pages</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section class="toolbar" aria-label="??">
+      <button class="image-button" type="button" data-action="load-example">
+        <img src="./assets/icon-sample.svg" alt="" />
+        <span>??</span>
+      </button>
+      <button class="image-button image-button--primary" type="button" data-action="calculate">
+        <img src="./assets/icon-calc.svg" alt="" />
+        <span>??</span>
+      </button>
+      <button class="image-button" type="button" data-action="export-csv">
+        <img src="./assets/icon-csv.svg" alt="" />
+        <span>CSV</span>
+      </button>
+      <button class="image-button" type="button" data-action="export-md">
+        <img src="./assets/icon-md.svg" alt="" />
+        <span>Markdown</span>
+      </button>
+      <button class="image-button" type="button" data-action="copy-conclusion">
+        <img src="./assets/icon-copy.svg" alt="" />
+        <span>????</span>
+      </button>
+      <button class="image-button" type="button" data-action="clear">
+        <img src="./assets/icon-clear.svg" alt="" />
+        <span>??</span>
+      </button>
+    </section>
+
+    <nav class="tabs" aria-label="????">
+      <button class="tab is-active" type="button" data-tab="water">
+        <img src="./assets/icon-water.svg" alt="" />
+        <span>????</span>
+      </button>
+      <button class="tab" type="button" data-tab="noise">
+        <img src="./assets/icon-noise.svg" alt="" />
+        <span>?? Leq</span>
+      </button>
+    </nav>
+
+    <section id="waterPanel" class="panel is-active" data-panel="water" aria-labelledby="waterTitle">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Calibration Curve</p>
+          <h2 id="waterTitle">COD / ?? / ??</h2>
+        </div>
+        <div class="field-inline">
+          <label for="analyte">??</label>
+          <select id="analyte">
+            <option value="cod">COD</option>
+            <option value="nh3n">??</option>
+            <option value="tp">??</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="control-grid">
+        <label>
+          <span>????</span>
+          <input id="reportTitle" type="text" value="????????" />
+        </label>
+        <label>
+          <span>????</span>
+          <input id="unit" type="text" value="mg/L" />
+        </label>
+        <label>
+          <span>????</span>
+          <input id="responseName" type="text" value="???" />
+        </label>
+        <label>
+          <span>?????? R?</span>
+          <input id="r2Target" type="number" min="0" max="1" step="0.001" value="0.995" />
+        </label>
+      </div>
+
+      <div class="data-layout">
+        <section class="data-block" aria-labelledby="standardsTitle">
+          <div class="block-head">
+            <h3 id="standardsTitle">????</h3>
+            <button class="mini-button" type="button" data-action="add-standard">
+              <img src="./assets/icon-add.svg" alt="" />
+              <span>???</span>
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>??</th>
+                  <th>??</th>
+                  <th>???</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="standardRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="data-block" aria-labelledby="samplesTitle">
+          <div class="block-head">
+            <h3 id="samplesTitle">????</h3>
+            <button class="mini-button" type="button" data-action="add-sample">
+              <img src="./assets/icon-add.svg" alt="" />
+              <span>???</span>
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>????</th>
+                  <th>?????</th>
+                  <th>????</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="sampleRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <div class="result-layout">
+        <section class="chart-panel" aria-labelledby="curveTitle">
+          <div class="block-head">
+            <h3 id="curveTitle">???</h3>
+            <p id="curveEquation" class="muted">????</p>
+          </div>
+          <canvas id="curveCanvas" width="900" height="520" aria-label="???????"></canvas>
+        </section>
+
+        <section class="result-panel" aria-labelledby="waterResultTitle">
+          <h3 id="waterResultTitle">????</h3>
+          <div class="metric-row" id="waterMetrics"></div>
+          <div class="table-wrap table-wrap--compact">
+            <table>
+              <thead>
+                <tr>
+                  <th>??</th>
+                  <th>????</th>
+                  <th>??</th>
+                  <th>??</th>
+                </tr>
+              </thead>
+              <tbody id="waterResultRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section id="noisePanel" class="panel" data-panel="noise" aria-labelledby="noiseTitle">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Equivalent Level</p>
+          <h2 id="noiseTitle">?? Leq</h2>
+        </div>
+        <button class="mini-button" type="button" data-action="add-noise">
+          <img src="./assets/icon-add.svg" alt="" />
+          <span>???</span>
+        </button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>??</th>
+              <th>??/??</th>
+              <th>?? dB(A)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="noiseRows"></tbody>
+        </table>
+      </div>
+
+      <div class="result-layout result-layout--noise">
+        <section class="chart-panel" aria-labelledby="noiseChartTitle">
+          <div class="block-head">
+            <h3 id="noiseChartTitle">Leq ?</h3>
+            <p class="muted">??????????</p>
+          </div>
+          <canvas id="noiseCanvas" width="900" height="520" aria-label="?? Leq ???"></canvas>
+        </section>
+
+        <section class="result-panel" aria-labelledby="noiseResultTitle">
+          <h3 id="noiseResultTitle">????</h3>
+          <div class="metric-row" id="noiseMetrics"></div>
+          <div class="table-wrap table-wrap--compact">
+            <table>
+              <thead>
+                <tr>
+                  <th>??</th>
+                  <th>????</th>
+                  <th>Leq</th>
+                  <th>??</th>
+                </tr>
+              </thead>
+              <tbody id="noiseResultRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="conclusion-panel" aria-labelledby="conclusionTitle">
+      <div class="block-head">
+        <h2 id="conclusionTitle">????</h2>
+        <span id="statusText" class="status" role="status" aria-live="polite">???????</span>
+      </div>
+      <textarea id="conclusionText" rows="8" spellcheck="false"></textarea>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>MIT ??</span>
+    <a href="https://github.com/oipllio/sleep" target="_blank" rel="noreferrer">GitHub ??</a>
+  </footer>
+
+  <!-- Dynamic scripts use textContent in app.js. -->
+  <script src="./app.js" defer></script>
+</body>
+</html>
