@@ -4,6 +4,8 @@ Sleep is a small, dependency-free collection of interactive Chinese static pages
 
 Live demo: https://oipllio.github.io/sleep/
 
+Kumiko Christmas galaxy tree: https://oipllio.github.io/sleep/kumiko-christmas/
+
 Environmental lab calculator: https://oipllio.github.io/sleep/water-lab/
 
 ## Why This Project Exists
