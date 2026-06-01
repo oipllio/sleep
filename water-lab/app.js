@@ -1,11 +1,11 @@
 const templates = {
   cod: {
-    reportTitle: "COD ????????",
+    reportTitle: "COD 实验数据计算记录",
     unit: "mg/L",
-    responseName: "???",
+    responseName: "吸光度",
     r2Target: 0.995,
     standards: [
-      ["??", 0, 0.002],
+      ["空白", 0, 0.002],
       ["S1", 20, 0.041],
       ["S2", 40, 0.081],
       ["S3", 80, 0.161],
@@ -13,17 +13,17 @@ const templates = {
       ["S5", 160, 0.321],
     ],
     samples: [
-      ["??-1", "0.188, 0.191, 0.190", 1],
-      ["??-1", "0.071, 0.073, 0.072", 1],
+      ["进水-1", "0.188, 0.191, 0.190", 1],
+      ["出水-1", "0.071, 0.073, 0.072", 1],
     ],
   },
   nh3n: {
-    reportTitle: "??????????",
+    reportTitle: "氨氮实验数据计算记录",
     unit: "mg/L",
-    responseName: "???",
+    responseName: "吸光度",
     r2Target: 0.995,
     standards: [
-      ["??", 0, 0.004],
+      ["空白", 0, 0.004],
       ["S1", 0.1, 0.035],
       ["S2", 0.3, 0.095],
       ["S3", 0.5, 0.156],
@@ -31,17 +31,17 @@ const templates = {
       ["S5", 1.0, 0.309],
     ],
     samples: [
-      ["??-A", "0.122, 0.126, 0.124", 1],
-      ["??-B", "0.058, 0.060, 0.059", 1],
+      ["河水-A", "0.122, 0.126, 0.124", 1],
+      ["出水-B", "0.058, 0.060, 0.059", 1],
     ],
   },
   tp: {
-    reportTitle: "??????????",
+    reportTitle: "总磷实验数据计算记录",
     unit: "mg/L",
-    responseName: "???",
+    responseName: "吸光度",
     r2Target: 0.995,
     standards: [
-      ["??", 0, 0.003],
+      ["空白", 0, 0.003],
       ["S1", 0.02, 0.026],
       ["S2", 0.05, 0.061],
       ["S3", 0.1, 0.119],
@@ -49,16 +49,16 @@ const templates = {
       ["S5", 0.4, 0.468],
     ],
     samples: [
-      ["??-1", "0.082, 0.084, 0.083", 1],
-      ["??-1", "0.221, 0.225, 0.223", 2],
+      ["湖水-1", "0.082, 0.084, 0.083", 1],
+      ["排口-1", "0.221, 0.225, 0.223", 2],
     ],
   },
 };
 
 const defaultNoiseRows = [
-  ["???", "??", "58.4, 59.1, 57.8, 58.9, 59.4"],
-  ["???", "??", "61.0, 60.4, 60.8, 61.3, 60.7"],
-  ["???", "??", "49.1, 48.7, 50.0, 49.4, 48.9"],
+  ["厂界东", "昼间", "58.4, 59.1, 57.8, 58.9, 59.4"],
+  ["厂界南", "昼间", "61.0, 60.4, 60.8, 61.3, 60.7"],
+  ["厂界西", "夜间", "49.1, 48.7, 50.0, 49.4, 48.9"],
 ];
 
 const els = {
@@ -86,7 +86,7 @@ let lastNoise = null;
 
 function parseNumbers(value) {
   return String(value || "")
-    .split(/[\s,?;??]+/)
+    .split(/[\s,，;；、]+/)
     .map((item) => Number(item.trim()))
     .filter((item) => Number.isFinite(item));
 }
@@ -99,18 +99,18 @@ function average(values) {
 function regression(points) {
   const valid = points.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
   const n = valid.length;
-  if (n < 2) throw new Error("???????? 2 ?????");
+  if (n < 2) throw new Error("标准曲线至少需要 2 个有效点。");
 
   const sumX = valid.reduce((sum, point) => sum + point.x, 0);
   const sumY = valid.reduce((sum, point) => sum + point.y, 0);
   const sumXY = valid.reduce((sum, point) => sum + point.x * point.y, 0);
   const sumX2 = valid.reduce((sum, point) => sum + point.x * point.x, 0);
   const denominator = n * sumX2 - sumX * sumX;
-  if (Math.abs(denominator) < 1e-12) throw new Error("???????????");
+  if (Math.abs(denominator) < 1e-12) throw new Error("标准浓度不能全部相同。");
 
   const slope = (n * sumXY - sumX * sumY) / denominator;
   const intercept = (sumY - slope * sumX) / n;
-  if (Math.abs(slope) < 1e-12) throw new Error("???????? 0????????");
+  if (Math.abs(slope) < 1e-12) throw new Error("标准曲线斜率接近 0，无法换算浓度。");
 
   const meanY = sumY / n;
   const ssTotal = valid.reduce((sum, point) => sum + Math.pow(point.y - meanY, 2), 0);
@@ -167,7 +167,7 @@ function standardRow(name = "", concentration = "", response = "") {
     `<td><input data-field="name" type="text" value="${escapeHtml(name)}" /></td>`,
     `<td><input data-field="x" type="number" step="any" value="${escapeHtml(concentration)}" /></td>`,
     `<td><input data-field="y" type="number" step="any" value="${escapeHtml(response)}" /></td>`,
-    `<td><button class="row-delete" type="button" aria-label="????">x</button></td>`,
+    `<td><button class="row-delete" type="button" aria-label="删除标样">x</button></td>`,
   ], "standard-row");
 }
 
@@ -176,7 +176,7 @@ function sampleRow(name = "", readings = "", dilution = 1) {
     `<td><input data-field="name" type="text" value="${escapeHtml(name)}" /></td>`,
     `<td><input data-field="readings" type="text" value="${escapeHtml(readings)}" /></td>`,
     `<td><input data-field="dilution" type="number" min="0" step="any" value="${escapeHtml(dilution)}" /></td>`,
-    `<td><button class="row-delete" type="button" aria-label="????">x</button></td>`,
+    `<td><button class="row-delete" type="button" aria-label="删除样品">x</button></td>`,
   ], "sample-row");
 }
 
@@ -185,7 +185,7 @@ function noiseRow(point = "", period = "", readings = "") {
     `<td><input data-field="point" type="text" value="${escapeHtml(point)}" /></td>`,
     `<td><input data-field="period" type="text" value="${escapeHtml(period)}" /></td>`,
     `<td><input data-field="readings" type="text" value="${escapeHtml(readings)}" /></td>`,
-    `<td><button class="row-delete" type="button" aria-label="????">x</button></td>`,
+    `<td><button class="row-delete" type="button" aria-label="删除点位">x</button></td>`,
   ], "noise-row");
 }
 
@@ -199,7 +199,7 @@ function loadTemplate(key = els.analyte.value) {
   els.sampleRows.replaceChildren(...data.samples.map((row) => sampleRow(...row)));
   els.noiseRows.replaceChildren(...defaultNoiseRows.map((row) => noiseRow(...row)));
   calculateAll();
-  setStatus("???????");
+  setStatus("已载入示例数据");
 }
 
 function collectStandards() {
@@ -213,7 +213,7 @@ function collectStandards() {
 
 function collectSamples() {
   return [...els.sampleRows.querySelectorAll("tr")].map((row, index) => {
-    const name = row.querySelector('[data-field="name"]').value.trim() || `??${index + 1}`;
+    const name = row.querySelector('[data-field="name"]').value.trim() || `样品${index + 1}`;
     const readings = parseNumbers(row.querySelector('[data-field="readings"]').value);
     const dilution = Number(row.querySelector('[data-field="dilution"]').value) || 1;
     return { name, readings, dilution };
@@ -222,8 +222,8 @@ function collectSamples() {
 
 function collectNoiseRows() {
   return [...els.noiseRows.querySelectorAll("tr")].map((row, index) => {
-    const point = row.querySelector('[data-field="point"]').value.trim() || `??${index + 1}`;
-    const period = row.querySelector('[data-field="period"]').value.trim() || "???";
+    const point = row.querySelector('[data-field="point"]').value.trim() || `点位${index + 1}`;
+    const period = row.querySelector('[data-field="period"]').value.trim() || "未标注";
     const readings = parseNumbers(row.querySelector('[data-field="readings"]').value);
     return { point, period, readings };
   }).filter((item) => item.readings.length);
@@ -236,7 +236,7 @@ function calculateWater() {
   const minX = Math.min(...standards.map((point) => point.x));
   const maxX = Math.max(...standards.map((point) => point.x));
   const unit = els.unit.value.trim() || "mg/L";
-  const responseName = els.responseName.value.trim() || "???";
+  const responseName = els.responseName.value.trim() || "响应值";
 
   const samples = collectSamples().map((sample) => {
     const avgResponse = average(sample.readings);
@@ -272,17 +272,17 @@ function metric(label, value) {
 function renderWater(result) {
   const { fit, samples, target, unit, responseName } = result;
   const equation = `${responseName} = ${fmt(fit.slope, 6)} x C + ${fmt(fit.intercept, 6)}`;
-  els.curveEquation.textContent = `${equation}?R? = ${fmt(fit.r2, 5)}`;
+  els.curveEquation.textContent = `${equation}，R² = ${fmt(fit.r2, 5)}`;
 
   els.waterMetrics.replaceChildren(
-    metric("??", fmt(fit.slope, 6)),
-    metric("??", fmt(fit.intercept, 6)),
-    metric("R?", fmt(fit.r2, 5)),
-    metric("???", String(fit.n)),
+    metric("斜率", fmt(fit.slope, 6)),
+    metric("截距", fmt(fit.intercept, 6)),
+    metric("R²", fmt(fit.r2, 5)),
+    metric("标样数", String(fit.n)),
   );
 
   els.waterResultRows.replaceChildren(...samples.map((sample) => {
-    const judgement = sample.inRange ? "?????" : "??????";
+    const judgement = sample.inRange ? "曲线范围内" : "超出曲线范围";
     const row = document.createElement("tr");
     row.innerHTML = [
       `<td>${escapeHtml(sample.name)}</td>`,
@@ -295,7 +295,7 @@ function renderWater(result) {
 
   drawCurve(result);
   updateConclusion();
-  setStatus(fit.r2 >= target ? "?????????????" : "???????R? ????");
+  setStatus(fit.r2 >= target ? "水质计算完成，线性满足阈值" : "水质计算完成，R² 低于阈值");
 }
 
 function renderNoise(result) {
@@ -303,10 +303,10 @@ function renderNoise(result) {
   const maxLeq = rows.length ? Math.max(...rows.map((row) => row.equivalent)) : NaN;
   const minLeq = rows.length ? Math.min(...rows.map((row) => row.equivalent)) : NaN;
   els.noiseMetrics.replaceChildren(
-    metric("???", String(rows.length)),
-    metric("?? Leq", Number.isFinite(maxLeq) ? `${fmt(maxLeq, 1)} dB(A)` : "-"),
-    metric("?? Leq", Number.isFinite(minLeq) ? `${fmt(minLeq, 1)} dB(A)` : "-"),
-    metric("??", "????"),
+    metric("点位数", String(rows.length)),
+    metric("最高 Leq", Number.isFinite(maxLeq) ? `${fmt(maxLeq, 1)} dB(A)` : "-"),
+    metric("最低 Leq", Number.isFinite(minLeq) ? `${fmt(minLeq, 1)} dB(A)` : "-"),
+    metric("算法", "能量平均"),
   );
 
   els.noiseResultRows.replaceChildren(...rows.map((item) => {
@@ -316,14 +316,14 @@ function renderNoise(result) {
       `<td>${escapeHtml(item.point)} / ${escapeHtml(item.period)}</td>`,
       `<td>${fmt(item.avg, 1)} dB(A)</td>`,
       `<td>${fmt(item.equivalent, 1)} dB(A)</td>`,
-      `<td>${diff >= .3 ? "?????" : "????"}</td>`,
+      `<td>${diff >= .3 ? "波动较明显" : "波动平稳"}</td>`,
     ].join("");
     return row;
   }));
 
   drawNoise(result);
   updateConclusion();
-  setStatus("?? Leq ????");
+  setStatus("噪声 Leq 计算完成");
 }
 
 function drawCurve(result) {
@@ -351,7 +351,7 @@ function drawCurve(result) {
   const yScale = (y) => height - pad.bottom - ((y - yMin) / (yMax - yMin || 1)) * (height - pad.top - pad.bottom);
 
   drawGrid(ctx, width, height, pad);
-  drawAxisLabels(ctx, width, height, "??", result.responseName);
+  drawAxisLabels(ctx, width, height, "浓度", result.responseName);
 
   ctx.strokeStyle = "#d94379";
   ctx.lineWidth = 3;
@@ -386,7 +386,7 @@ function drawNoise(result) {
 
   const pad = { left: 62, right: 28, top: 28, bottom: 72 };
   drawGrid(ctx, width, height, pad);
-  drawAxisLabels(ctx, width, height, "??", "dB(A)");
+  drawAxisLabels(ctx, width, height, "点位", "dB(A)");
 
   const rows = result.rows;
   if (!rows.length) return;
@@ -492,12 +492,12 @@ function updateConclusion() {
   if (lastWater) {
     const { fit, samples, target, unit, responseName } = lastWater;
     const analyteLabel = els.analyte.options[els.analyte.selectedIndex].textContent;
-    const linearText = fit.r2 >= target ? "??????????" : "????????????????????????????";
-    lines.push(`${els.reportTitle.value || analyteLabel}??? ${analyteLabel} ?????? ${fit.n} ???????${responseName} = ${fmt(fit.slope, 6)} x C + ${fmt(fit.intercept, 6)}?R? = ${fmt(fit.r2, 5)}?${linearText}?`);
+    const linearText = fit.r2 >= target ? "线性关系满足设定阈值" : "线性关系未达到设定阈值，建议复核标样配制、空白和仪器响应";
+    lines.push(`${els.reportTitle.value || analyteLabel}：本次 ${analyteLabel} 标准曲线采用 ${fit.n} 个有效点拟合，${responseName} = ${fmt(fit.slope, 6)} x C + ${fmt(fit.intercept, 6)}，R² = ${fmt(fit.r2, 5)}，${linearText}。`);
     if (samples.length) {
-      const sampleText = samples.map((sample) => `${sample.name} ${fmt(sample.concentration, 3)} ${unit}`).join("?");
-      const rangeWarn = samples.some((sample) => !sample.inRange) ? "??????????????????????????????????" : "????????????????";
-      lines.push(`?????${sampleText}?${rangeWarn}`);
+      const sampleText = samples.map((sample) => `${sample.name} ${fmt(sample.concentration, 3)} ${unit}`).join("；");
+      const rangeWarn = samples.some((sample) => !sample.inRange) ? "其中存在样品换算点超出标准曲线范围，结果宜稀释复测或扩展曲线后确认。" : "样品换算点均位于标准曲线范围内。";
+      lines.push(`样品结果：${sampleText}。${rangeWarn}`);
     }
   }
 
@@ -505,8 +505,8 @@ function updateConclusion() {
     const rows = lastNoise.rows;
     if (rows.length) {
       const top = rows.reduce((best, item) => item.equivalent > best.equivalent ? item : best, rows[0]);
-      const text = rows.map((row) => `${row.point}${row.period ? `(${row.period})` : ""} Leq ${fmt(row.equivalent, 1)} dB(A)`).join("?");
-      lines.push(`?????${text}?????? ${top.point}?Leq = ${fmt(top.equivalent, 1)} dB(A)?`);
+      const text = rows.map((row) => `${row.point}${row.period ? `(${row.period})` : ""} Leq ${fmt(row.equivalent, 1)} dB(A)`).join("；");
+      lines.push(`噪声监测：${text}。最高点位为 ${top.point}，Leq = ${fmt(top.equivalent, 1)} dB(A)。`);
     }
   }
 
@@ -530,16 +530,16 @@ function ensureLatest() {
 function exportCsv() {
   const { water, noise } = ensureLatest();
   const rows = [];
-  rows.push(["????", els.reportTitle.value]);
+  rows.push(["报告名称", els.reportTitle.value]);
   rows.push([]);
   if (water) {
-    rows.push(["??????"]);
-    rows.push(["??", "??", water.responseName]);
+    rows.push(["水质标准曲线"]);
+    rows.push(["标样", "浓度", water.responseName]);
     water.standards.forEach((point) => rows.push([point.name, point.x, point.y]));
-    rows.push(["??", `${water.responseName} = ${fmt(water.fit.slope, 6)} x C + ${fmt(water.fit.intercept, 6)}`, "R2", fmt(water.fit.r2, 5)]);
+    rows.push(["方程", `${water.responseName} = ${fmt(water.fit.slope, 6)} x C + ${fmt(water.fit.intercept, 6)}`, "R2", fmt(water.fit.r2, 5)]);
     rows.push([]);
-    rows.push(["??????"]);
-    rows.push(["??", "????", "????", "????", "????", "??", "??"]);
+    rows.push(["水质样品结果"]);
+    rows.push(["样品", "平均响应", "曲线浓度", "稀释倍数", "最终浓度", "单位", "判读"]);
     water.samples.forEach((sample) => rows.push([
       sample.name,
       fmt(sample.avgResponse, 4),
@@ -547,13 +547,13 @@ function exportCsv() {
       sample.dilution,
       fmt(sample.concentration, 3),
       water.unit,
-      sample.inRange ? "?????" : "??????",
+      sample.inRange ? "曲线范围内" : "超出曲线范围",
     ]));
     rows.push([]);
   }
   if (noise) {
-    rows.push(["?? Leq ??"]);
-    rows.push(["??", "??/??", "???? dB(A)", "Leq dB(A)", "????"]);
+    rows.push(["噪声 Leq 结果"]);
+    rows.push(["点位", "工况/时段", "算术均值 dB(A)", "Leq dB(A)", "原始声级"]);
     noise.rows.forEach((item) => rows.push([
       item.point,
       item.period,
@@ -563,49 +563,49 @@ function exportCsv() {
     ]));
     rows.push([]);
   }
-  rows.push(["??"]);
+  rows.push(["结论"]);
   rows.push([els.conclusionText.value]);
 
   const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
   download(`lab-results-${dateStamp()}.csv`, `\ufeff${csv}`, "text/csv;charset=utf-8");
-  setStatus("CSV ???");
+  setStatus("CSV 已导出");
 }
 
 function exportMarkdown() {
   const { water, noise } = ensureLatest();
-  const parts = [`# ${els.reportTitle.value || "????????"}`];
+  const parts = [`# ${els.reportTitle.value || "实验数据计算记录"}`];
   if (water) {
     parts.push(
       "",
-      "## ??????",
+      "## 水质标准曲线",
       "",
-      `- ???${water.responseName} = ${fmt(water.fit.slope, 6)} x C + ${fmt(water.fit.intercept, 6)}`,
-      `- R??${fmt(water.fit.r2, 5)}`,
+      `- 方程：${water.responseName} = ${fmt(water.fit.slope, 6)} x C + ${fmt(water.fit.intercept, 6)}`,
+      `- R²：${fmt(water.fit.r2, 5)}`,
       "",
-      "| ?? | ?? | ??? |",
+      "| 标样 | 浓度 | 响应值 |",
       "| --- | ---: | ---: |",
       ...water.standards.map((point) => `| ${point.name} | ${fmt(point.x, 4)} | ${fmt(point.y, 4)} |`),
       "",
-      "## ??????",
+      "## 水质样品结果",
       "",
-      "| ?? | ???? | ???? | ?? |",
+      "| 样品 | 平均响应 | 最终浓度 | 判读 |",
       "| --- | ---: | ---: | --- |",
-      ...water.samples.map((sample) => `| ${sample.name} | ${fmt(sample.avgResponse, 4)} | ${fmt(sample.concentration, 3)} ${water.unit} | ${sample.inRange ? "?????" : "??????"} |`),
+      ...water.samples.map((sample) => `| ${sample.name} | ${fmt(sample.avgResponse, 4)} | ${fmt(sample.concentration, 3)} ${water.unit} | ${sample.inRange ? "曲线范围内" : "超出曲线范围"} |`),
     );
   }
   if (noise) {
     parts.push(
       "",
-      "## ?? Leq ??",
+      "## 噪声 Leq 结果",
       "",
-      "| ?? | ??/?? | ???? | Leq |",
+      "| 点位 | 工况/时段 | 算术均值 | Leq |",
       "| --- | --- | ---: | ---: |",
       ...noise.rows.map((item) => `| ${item.point} | ${item.period} | ${fmt(item.avg, 1)} dB(A) | ${fmt(item.equivalent, 1)} dB(A) |`),
     );
   }
-  parts.push("", "## ??", "", els.conclusionText.value);
+  parts.push("", "## 结论", "", els.conclusionText.value);
   download(`lab-results-${dateStamp()}.md`, parts.join("\n"), "text/markdown;charset=utf-8");
-  setStatus("Markdown ???");
+  setStatus("Markdown 已导出");
 }
 
 function download(filename, content, type) {
@@ -634,11 +634,11 @@ async function copyConclusion() {
   ensureLatest();
   try {
     await navigator.clipboard.writeText(els.conclusionText.value);
-    setStatus("?????");
+    setStatus("结论已复制");
   } catch {
     els.conclusionText.select();
     document.execCommand("copy");
-    setStatus("?????");
+    setStatus("结论已复制");
   }
 }
 
@@ -649,7 +649,7 @@ function clearActive() {
     lastWater = null;
     els.waterResultRows.replaceChildren();
     els.waterMetrics.replaceChildren();
-    els.curveEquation.textContent = "????";
+    els.curveEquation.textContent = "等待计算";
     els.curveCanvas.getContext("2d").clearRect(0, 0, els.curveCanvas.width, els.curveCanvas.height);
   } else {
     els.noiseRows.replaceChildren();
@@ -659,7 +659,7 @@ function clearActive() {
     els.noiseCanvas.getContext("2d").clearRect(0, 0, els.noiseCanvas.width, els.noiseCanvas.height);
   }
   updateConclusion();
-  setStatus("????????");
+  setStatus("已清空当前页数据");
 }
 
 document.addEventListener("click", (event) => {
@@ -681,7 +681,7 @@ document.addEventListener("click", (event) => {
   if (tab) {
     document.querySelectorAll(".tab").forEach((item) => item.classList.toggle("is-active", item === tab));
     document.querySelectorAll(".panel").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.panel === tab.dataset.tab));
-    setStatus(tab.dataset.tab === "water" ? "????????" : "?????? Leq");
+    setStatus(tab.dataset.tab === "water" ? "已切换到水质指标" : "已切换到噪声 Leq");
     setTimeout(() => {
       if (lastWater) drawCurve(lastWater);
       if (lastNoise) drawNoise(lastNoise);

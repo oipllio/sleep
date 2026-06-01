@@ -21,7 +21,7 @@ This repository is not distributed as an npm/PyPI package, so monthly package do
 - Floating decorative effects and click fireworks
 - Playful confirmation flow with keyboard-accessible buttons
 - Reduced-motion support for users who prefer less animation
-- Browser-side calculator for COD, ammonia nitrogen, total phosphorus, noise Leq, calibration curves, R?, concentration conversion, result tables, conclusions, and CSV / Markdown export
+- Browser-side calculator for COD, ammonia nitrogen, total phosphorus, noise Leq, calibration curves, R², concentration conversion, result tables, conclusions, and CSV / Markdown export
 
 ## Project Structure
 
