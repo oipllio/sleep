@@ -3,6 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"%3E%3Cpath fill="%23f4d478" d="M16 3 20 12 30 13 22 19 25 29 16 24 7 29 10 19 2 13 12 12Z"/%3E%3C/svg%3E'>
+    <link rel="modulepreload" href="./vendor/three/build/three.module.js">
+    <link rel="modulepreload" href="./vendor/three/examples/jsm/controls/OrbitControls.js">
+    <link rel="modulepreload" href="./vendor/three/examples/jsm/postprocessing/EffectComposer.js">
+    <link rel="modulepreload" href="./vendor/three/examples/jsm/postprocessing/RenderPass.js">
+    <link rel="modulepreload" href="./vendor/three/examples/jsm/postprocessing/UnrealBloomPass.js">
+    <link rel="modulepreload" href="./vendor/three/examples/jsm/environments/RoomEnvironment.js">
     <title>久美子的星河圣诞树</title>
     <style>
         :root {
@@ -182,8 +189,8 @@
     <script type="importmap">
         {
             "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+                "three": "./vendor/three/build/three.module.js",
+                "three/addons/": "./vendor/three/examples/jsm/"
             }
         }
     </script>
@@ -239,6 +246,10 @@
             },
             camera: {
                 z: 48
+            },
+            photos: {
+                concurrentLoads: 3,
+                textureSize: 384
             }
         };
 
@@ -279,9 +290,15 @@
             createSnow();
             setupPostProcessing();
             setupEvents();
-            await loadBuiltInPhotos();
             hideLoader();
             animate();
+            loadBuiltInPhotos().catch((error) => {
+                console.error("Failed to load built-in photos", error);
+                if (STATE.total === 0) {
+                    addPlaceholderPhoto();
+                    updateCounter(1, 1);
+                }
+            });
         }
 
         function initThree() {
@@ -299,7 +316,7 @@
                 powerPreference: "high-performance"
             });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
             renderer.toneMappingExposure = 1.18;
             container.appendChild(renderer.domElement);
@@ -690,7 +707,7 @@
         async function loadBuiltInPhotos() {
             let manifest = [];
             try {
-                const response = await fetch("./photos.json", { cache: "no-store" });
+                const response = await fetch("./photos.json");
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 manifest = await response.json();
             } catch (error) {
@@ -707,7 +724,7 @@
             updateCounter(0, manifest.length);
 
             const queue = manifest.map((item, index) => ({ item, index }));
-            const workers = Array.from({ length: Math.min(8, queue.length) }, async () => {
+            const workers = Array.from({ length: Math.min(CONFIG.photos.concurrentLoads, queue.length) }, async () => {
                 while (queue.length > 0) {
                     const next = queue.shift();
                     try {
@@ -719,6 +736,7 @@
                         STATE.loaded += 1;
                         updateCounter(STATE.loaded, manifest.length);
                     }
+                    await waitForNextFrame();
                 }
             });
 
@@ -731,16 +749,17 @@
             const sx = ((img.naturalWidth || img.width) - size) / 2;
             const sy = ((img.naturalHeight || img.height) - size) / 2;
             const canvas = document.createElement("canvas");
-            canvas.width = 512;
-            canvas.height = 512;
+            const textureSize = CONFIG.photos.textureSize;
+            canvas.width = textureSize;
+            canvas.height = textureSize;
             const ctx = canvas.getContext("2d");
             ctx.fillStyle = "#050712";
-            ctx.fillRect(0, 0, 512, 512);
-            ctx.drawImage(img, sx, sy, size, size, 0, 0, 512, 512);
+            ctx.fillRect(0, 0, textureSize, textureSize);
+            ctx.drawImage(img, sx, sy, size, size, 0, 0, textureSize, textureSize);
 
             const texture = new THREE.CanvasTexture(canvas);
             texture.colorSpace = THREE.SRGBColorSpace;
-            texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            texture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
             texture.minFilter = THREE.LinearMipmapLinearFilter;
             texture.magFilter = THREE.LinearFilter;
             return texture;
@@ -751,8 +770,13 @@
                 const img = new Image();
                 img.onload = () => resolve(img);
                 img.onerror = reject;
+                img.decoding = "async";
                 img.src = src;
             });
+        }
+
+        function waitForNextFrame() {
+            return new Promise((resolve) => requestAnimationFrame(resolve));
         }
 
         function addPhotoToScene(texture, label, index, total) {
