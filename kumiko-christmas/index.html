@@ -226,6 +226,11 @@
         import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
         import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
+        const DEVICE = {
+            compact: Math.min(window.innerWidth, window.innerHeight) <= 680 || (navigator.deviceMemory && navigator.deviceMemory <= 4),
+            reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        };
+
         const CONFIG = {
             colors: {
                 bg: 0x02030a,
@@ -236,20 +241,26 @@
                 violet: 0xb997ff
             },
             tree: {
-                count: 1700,
+                count: DEVICE.reducedMotion ? 850 : (DEVICE.compact ? 1150 : 1700),
                 height: 24,
                 radius: 8
             },
             galaxy: {
-                dustCount: 4200,
-                starCount: 2600
+                dustCount: DEVICE.reducedMotion ? 1800 : (DEVICE.compact ? 2800 : 4200),
+                starCount: DEVICE.reducedMotion ? 1200 : (DEVICE.compact ? 1800 : 2600)
             },
             camera: {
                 z: 48
             },
             photos: {
-                concurrentLoads: 3,
-                textureSize: 384
+                concurrentLoads: DEVICE.compact ? 2 : 3,
+                textureSize: DEVICE.compact ? 288 : 384,
+                focusTextureSize: DEVICE.compact ? 512 : 768
+            },
+            render: {
+                pixelRatio: DEVICE.compact ? 1.15 : 1.5,
+                snowCount: DEVICE.reducedMotion ? 360 : (DEVICE.compact ? 620 : 900),
+                treeRotationSpeed: DEVICE.reducedMotion ? 0.035 : 0.11
             }
         };
 
@@ -273,8 +284,15 @@
         let particleSystem = [];
         let photoParticles = [];
         let photoMeshGroup = new THREE.Group();
+        let resizeFrame = 0;
+        let isPageVisible = !document.hidden;
 
         const shared = {};
+        const scratch = {
+            focusWorld: new THREE.Vector3(0, 2.4, 29),
+            focusLocal: new THREE.Vector3(),
+            inverseMain: new THREE.Matrix4()
+        };
         const counterEl = document.getElementById("image-count");
         const loaderTextEl = document.getElementById("loader-text");
 
@@ -316,7 +334,7 @@
                 powerPreference: "high-performance"
             });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.render.pixelRatio));
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
             renderer.toneMappingExposure = 1.18;
             container.appendChild(renderer.domElement);
@@ -435,6 +453,7 @@
                     (Math.random() - 0.5) * 1.8,
                     (Math.random() - 0.5) * 1.8
                 );
+                this.scaleTarget = new THREE.Vector3(this.baseScale, this.baseScale, this.baseScale);
                 this.orbit = {
                     radius: 12,
                     y: 0,
@@ -495,9 +514,8 @@
                     );
 
                     if (STATE.focusTarget === this.mesh) {
-                        const desiredWorldPos = new THREE.Vector3(0, 2.4, 29);
-                        const invMatrix = new THREE.Matrix4().copy(mainGroup.matrixWorld).invert();
-                        target = desiredWorldPos.applyMatrix4(invMatrix);
+                        scratch.inverseMain.copy(mainGroup.matrixWorld).invert();
+                        target = scratch.focusLocal.copy(scratch.focusWorld).applyMatrix4(scratch.inverseMain);
                         scale = this.baseScale * 3.25;
                     } else if (STATE.focusTarget) {
                         scale = this.baseScale * 0.72;
@@ -508,7 +526,7 @@
                     this.mesh.position.lerp(target, dt * 2.2);
                     this.mesh.lookAt(camera.position);
                     this.mesh.rotateZ(Math.sin(time * 0.45 + this.orbit.phase) * 0.035);
-                    this.mesh.scale.lerp(new THREE.Vector3(scale, scale, scale), dt * 4);
+                    this.mesh.scale.lerp(this.scaleTarget.setScalar(scale), dt * 4);
                     return;
                 }
 
@@ -516,7 +534,7 @@
                 this.mesh.rotation.x += this.spinSpeed.x * dt * 0.22;
                 this.mesh.rotation.y += (0.34 + this.spinSpeed.y * 0.2) * dt;
                 this.mesh.rotation.z += this.spinSpeed.z * dt * 0.12;
-                this.mesh.scale.lerp(new THREE.Vector3(scale, scale, scale), dt * 4);
+                this.mesh.scale.lerp(this.scaleTarget.setScalar(scale), dt * 4);
             }
         }
 
@@ -667,7 +685,7 @@
         function createSnow() {
             const positions = [];
             const velocities = [];
-            for (let i = 0; i < 900; i++) {
+            for (let i = 0; i < CONFIG.render.snowCount; i++) {
                 positions.push(
                     (Math.random() - 0.5) * 112,
                     (Math.random() - 0.5) * 86 + 14,
@@ -729,7 +747,7 @@
                     const next = queue.shift();
                     try {
                         const texture = await createPhotoTexture(next.item.src);
-                        addPhotoToScene(texture, next.item.name, next.index, manifest.length);
+                        addPhotoToScene(texture, next.item.name, next.index, manifest.length, next.item.fullSrc);
                     } catch (error) {
                         console.warn("Skipped photo", next.item.src, error);
                     } finally {
@@ -743,13 +761,13 @@
             await Promise.all(workers);
         }
 
-        async function createPhotoTexture(src) {
+        async function createPhotoTexture(src, targetSize = CONFIG.photos.textureSize) {
             const img = await loadImage(src);
             const size = Math.min(img.naturalWidth || img.width, img.naturalHeight || img.height);
             const sx = ((img.naturalWidth || img.width) - size) / 2;
             const sy = ((img.naturalHeight || img.height) - size) / 2;
             const canvas = document.createElement("canvas");
-            const textureSize = CONFIG.photos.textureSize;
+            const textureSize = targetSize;
             canvas.width = textureSize;
             canvas.height = textureSize;
             const ctx = canvas.getContext("2d");
@@ -779,15 +797,16 @@
             return new Promise((resolve) => requestAnimationFrame(resolve));
         }
 
-        function addPhotoToScene(texture, label, index, total) {
+        function addPhotoToScene(texture, label, index, total, fullSrc = "") {
             const frame = new THREE.Mesh(shared.frameGeo, shared.frameMat);
+            const photoMaterial = new THREE.MeshBasicMaterial({
+                map: texture,
+                color: 0xffffff,
+                side: THREE.DoubleSide
+            });
             const photo = new THREE.Mesh(
                 shared.photoGeo,
-                new THREE.MeshBasicMaterial({
-                    map: texture,
-                    color: 0xffffff,
-                    side: THREE.DoubleSide
-                })
+                photoMaterial
             );
             photo.position.z = 0.045;
 
@@ -800,6 +819,10 @@
 
             const group = new THREE.Group();
             group.userData.label = label || "";
+            group.userData.fullSrc = fullSrc || "";
+            group.userData.photoMaterial = photoMaterial;
+            group.userData.highResLoaded = false;
+            group.userData.highResLoading = false;
             group.add(frame, photo, hook, bead);
             group.scale.setScalar(0.66);
 
@@ -890,6 +913,35 @@
             if (photoParticles.length === 0) return;
             STATE.focusIndex = (STATE.focusIndex + 1) % photoParticles.length;
             STATE.focusTarget = photoParticles[STATE.focusIndex].mesh;
+            upgradeFocusedPhoto(STATE.focusTarget);
+        }
+
+        async function upgradeFocusedPhoto(group) {
+            if (!group || !group.userData.fullSrc || group.userData.highResLoaded || group.userData.highResLoading) return;
+
+            const token = Symbol("photo-load");
+            group.userData.highResLoading = true;
+            group.userData.loadToken = token;
+            try {
+                const texture = await createPhotoTexture(group.userData.fullSrc, CONFIG.photos.focusTextureSize);
+                if (group.userData.loadToken !== token || !photoMeshGroup.children.includes(group)) {
+                    texture.dispose();
+                    return;
+                }
+
+                const material = group.userData.photoMaterial;
+                const previousTexture = material.map;
+                material.map = texture;
+                material.needsUpdate = true;
+                if (previousTexture) previousTexture.dispose();
+                group.userData.highResLoaded = true;
+            } catch (error) {
+                console.warn("Failed to upgrade focused photo", group.userData.fullSrc, error);
+            } finally {
+                if (group.userData.loadToken === token) {
+                    group.userData.highResLoading = false;
+                }
+            }
         }
 
         function clearFocus() {
@@ -899,10 +951,20 @@
 
         function setupEvents() {
             window.addEventListener("resize", () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                composer.setSize(window.innerWidth, window.innerHeight);
+                if (resizeFrame) return;
+                resizeFrame = requestAnimationFrame(() => {
+                    resizeFrame = 0;
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                    renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.render.pixelRatio));
+                    composer.setSize(window.innerWidth, window.innerHeight);
+                });
+            });
+
+            document.addEventListener("visibilitychange", () => {
+                isPageVisible = !document.hidden;
+                clock.getDelta();
             });
 
             renderer.domElement.addEventListener("dblclick", focusNextPhoto);
@@ -924,10 +986,12 @@
 
         function animate() {
             requestAnimationFrame(animate);
+            if (!isPageVisible) return;
+
             const dt = Math.min(clock.getDelta(), 0.04);
             const elapsed = clock.elapsedTime;
 
-            mainGroup.rotation.y += dt * 0.11;
+            mainGroup.rotation.y += dt * CONFIG.render.treeRotationSpeed;
             if (galaxyDust) {
                 galaxyDust.rotation.y -= dt * 0.055;
                 galaxyDust.rotation.x = Math.sin(elapsed * 0.12) * 0.045;

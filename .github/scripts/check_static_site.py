@@ -1,9 +1,11 @@
 from html.parser import HTMLParser
+import json
 from pathlib import Path
 import sys
 
 
 ROOT = Path(__file__).resolve().parents[2]
+PHOTO_MANIFEST = ROOT / "kumiko-christmas" / "photos.json"
 
 
 class PageParser(HTMLParser):
@@ -75,6 +77,54 @@ def validate_html(path):
     return errors
 
 
+def validate_photo_manifest(path):
+    errors = []
+    if not path.exists():
+        return [f"{path}: missing photo manifest"]
+
+    try:
+        photos = json.loads(path.read_text(encoding="utf-8"))
+    except UnicodeDecodeError as exc:
+        return [f"{path}: is not valid UTF-8 ({exc})"]
+    except json.JSONDecodeError as exc:
+        return [f"{path}: invalid JSON ({exc})"]
+
+    if not isinstance(photos, list) or not photos:
+        return [f"{path}: expected a non-empty JSON array"]
+
+    base = path.parent.resolve()
+    seen_names = set()
+    for index, item in enumerate(photos, start=1):
+        if not isinstance(item, dict):
+            errors.append(f"{path}: item {index} must be an object")
+            continue
+
+        name = item.get("name")
+        if not isinstance(name, str) or not name.strip():
+            errors.append(f"{path}: item {index} missing name")
+        elif name in seen_names:
+            errors.append(f"{path}: duplicate photo name {name}")
+        else:
+            seen_names.add(name)
+
+        for field in ("src", "fullSrc"):
+            value = item.get(field)
+            if not isinstance(value, str) or not value.strip():
+                errors.append(f"{path}: item {index} missing {field}")
+                continue
+            if value.startswith(("/", "http://", "https://")):
+                errors.append(f"{path}: item {index} {field} must be a relative local path")
+                continue
+
+            target = (path.parent / value).resolve()
+            if not target.is_relative_to(base):
+                errors.append(f"{path}: item {index} {field} escapes the site root")
+            elif not target.is_file():
+                errors.append(f"{path}: item {index} {field} does not exist: {value}")
+
+    return errors
+
+
 def main():
     html_files = sorted(
         p for p in ROOT.rglob("*.html") if ".git" not in p.parts
@@ -86,6 +136,7 @@ def main():
     errors = []
     for path in html_files:
         errors.extend(validate_html(path))
+    errors.extend(validate_photo_manifest(PHOTO_MANIFEST))
 
     if errors:
         print("Static validation failed:")
@@ -93,7 +144,7 @@ def main():
             print(f"- {error}")
         return 1
 
-    print(f"Validated {len(html_files)} HTML file(s).")
+    print(f"Validated {len(html_files)} HTML file(s) and {PHOTO_MANIFEST.name}.")
     return 0
 
 
