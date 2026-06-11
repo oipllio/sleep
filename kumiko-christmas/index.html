@@ -146,6 +146,13 @@
             transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
         }
 
+        button.is-playing {
+            color: #fff4ba;
+            background: rgba(244, 212, 120, 0.2);
+            border-color: rgba(244, 212, 120, 0.78);
+            box-shadow: 0 0 18px rgba(244, 212, 120, 0.18);
+        }
+
         button {
             display: flex;
         }
@@ -226,6 +233,7 @@
         <p class="subtitle">把每一张回忆挂进星河，等雪光慢慢亮起来。</p>
         <div id="image-count" class="counter">0 / 0</div>
         <div class="action-row">
+            <button id="music-toggle" type="button" aria-label="播放 愛を見つけた場所" title="愛を見つけた場所">音乐</button>
             <button id="focus-next" type="button">聚焦照片</button>
             <button id="clear-focus" type="button">全景</button>
             <label class="upload-btn">
@@ -234,6 +242,10 @@
             </label>
         </div>
     </div>
+
+    <audio id="bg-music" preload="none" loop>
+        <source src="./assets/music/ai-wo-mitsuketa-basho.mp3" type="audio/mpeg">
+    </audio>
 
     <script type="module">
         import * as THREE from "three";
@@ -273,9 +285,11 @@
                 z: 48
             },
             photos: {
-                concurrentLoads: DEVICE.compact ? 2 : 3,
+                concurrentLoads: 1,
                 textureSize: DEVICE.compact ? 288 : 384,
-                focusTextureSize: DEVICE.compact ? 512 : 768
+                focusTextureSize: DEVICE.compact ? 512 : 768,
+                loadPauseMs: DEVICE.compact ? 110 : 70,
+                musicHoldMs: 2600
             },
             render: {
                 pixelRatio: DEVICE.compact ? 1.15 : 1.5,
@@ -288,7 +302,9 @@
             focusIndex: -1,
             focusTarget: null,
             loaded: 0,
-            total: 0
+            total: 0,
+            musicReady: false,
+            musicHoldUntil: 0
         };
 
         let scene;
@@ -319,6 +335,8 @@
         };
         const counterEl = document.getElementById("image-count");
         const loaderTextEl = document.getElementById("loader-text");
+        const musicToggleEl = document.getElementById("music-toggle");
+        const musicAudioEl = document.getElementById("bg-music");
 
         async function init() {
             initThree();
@@ -870,6 +888,8 @@
                 while (queue.length > 0) {
                     const next = queue.shift();
                     try {
+                        await waitForAudioPriority();
+                        await waitForIdleSlot();
                         const texture = await createPhotoTexture(next.item.src);
                         addPhotoToScene(texture, next.item.name, next.index, manifest.length, next.item.fullSrc);
                     } catch (error) {
@@ -878,7 +898,7 @@
                         STATE.loaded += 1;
                         updateCounter(STATE.loaded, manifest.length);
                     }
-                    await waitForNextFrame();
+                    await waitForFrameBudget();
                 }
             });
 
@@ -919,6 +939,35 @@
 
         function waitForNextFrame() {
             return new Promise((resolve) => requestAnimationFrame(resolve));
+        }
+
+        function waitForIdleSlot() {
+            if ("requestIdleCallback" in window) {
+                return new Promise((resolve) => {
+                    window.requestIdleCallback(resolve, { timeout: 700 });
+                });
+            }
+            return waitForNextFrame();
+        }
+
+        async function waitForFrameBudget() {
+            await waitForNextFrame();
+            if (DEVICE.compact || STATE.musicReady) {
+                await waitForIdleSlot();
+            }
+            const pause = STATE.musicReady ? CONFIG.photos.loadPauseMs * 1.8 : CONFIG.photos.loadPauseMs;
+            await sleep(pause);
+        }
+
+        function sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+
+        async function waitForAudioPriority() {
+            const remaining = STATE.musicHoldUntil - performance.now();
+            if (remaining > 0) {
+                await sleep(Math.min(remaining, CONFIG.photos.musicHoldMs));
+            }
         }
 
         function addPhotoToScene(texture, label, index, total, fullSrc = "") {
@@ -1073,6 +1122,36 @@
             STATE.focusTarget = null;
         }
 
+        async function toggleMusic() {
+            if (!musicAudioEl) return;
+
+            if (musicAudioEl.paused) {
+                musicAudioEl.preload = "auto";
+                musicAudioEl.volume = 0.86;
+                STATE.musicHoldUntil = performance.now() + CONFIG.photos.musicHoldMs;
+                try {
+                    await musicAudioEl.play();
+                    STATE.musicReady = true;
+                    updateMusicButton();
+                } catch (error) {
+                    console.warn("Music playback did not start", error);
+                    musicToggleEl.textContent = "重试";
+                    musicToggleEl.classList.remove("is-playing");
+                }
+            } else {
+                musicAudioEl.pause();
+                updateMusicButton();
+            }
+        }
+
+        function updateMusicButton() {
+            if (!musicAudioEl || !musicToggleEl) return;
+            const playing = !musicAudioEl.paused;
+            musicToggleEl.textContent = playing ? "暂停" : "音乐";
+            musicToggleEl.classList.toggle("is-playing", playing);
+            musicToggleEl.setAttribute("aria-label", `${playing ? "暂停" : "播放"} 愛を見つけた場所`);
+        }
+
         function setupEvents() {
             window.addEventListener("resize", () => {
                 if (resizeFrame) return;
@@ -1092,6 +1171,9 @@
             });
 
             renderer.domElement.addEventListener("dblclick", focusNextPhoto);
+            musicToggleEl.addEventListener("click", toggleMusic);
+            musicAudioEl.addEventListener("play", updateMusicButton);
+            musicAudioEl.addEventListener("pause", updateMusicButton);
             document.getElementById("focus-next").addEventListener("click", focusNextPhoto);
             document.getElementById("clear-focus").addEventListener("click", clearFocus);
             document.getElementById("file-input").addEventListener("change", handleImageUpload);
