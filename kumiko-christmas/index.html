@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="久美子的 3D 星河圣诞树，用照片、星尘、雪光和流动灯带收藏节日回忆。">
     <link rel="icon" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"%3E%3Cpath fill="%23f4d478" d="M16 3 20 12 30 13 22 19 25 29 16 24 7 29 10 19 2 13 12 12Z"/%3E%3C/svg%3E'>
     <link rel="modulepreload" href="./vendor/three/build/three.module.js">
     <link rel="modulepreload" href="./vendor/three/examples/jsm/controls/OrbitControls.js">
@@ -101,6 +102,15 @@
                 0 0 64px rgba(74, 126, 255, 0.22);
         }
 
+        .subtitle {
+            margin: 10px 0 0;
+            max-width: min(620px, calc(100vw - 36px));
+            color: rgba(255, 247, 207, 0.78);
+            font: 14px/1.65 "Segoe UI", "Microsoft YaHei", sans-serif;
+            text-align: center;
+            text-shadow: 0 0 18px rgba(74, 126, 255, 0.2);
+        }
+
         .counter {
             margin-top: 12px;
             min-width: 112px;
@@ -184,6 +194,12 @@
                 padding: 0 6px;
                 font-size: 12px;
             }
+
+            .subtitle {
+                margin-top: 8px;
+                font-size: 12px;
+                line-height: 1.55;
+            }
         }
     </style>
     <script type="importmap">
@@ -207,9 +223,10 @@
 
     <div id="ui-layer">
         <h1>久美子的星河圣诞树</h1>
+        <p class="subtitle">把每一张回忆挂进星河，等雪光慢慢亮起来。</p>
         <div id="image-count" class="counter">0 / 0</div>
         <div class="action-row">
-            <button id="focus-next" type="button">聚焦</button>
+            <button id="focus-next" type="button">聚焦照片</button>
             <button id="clear-focus" type="button">全景</button>
             <label class="upload-btn">
                 加照片
@@ -241,9 +258,12 @@
                 violet: 0xb997ff
             },
             tree: {
-                count: DEVICE.reducedMotion ? 850 : (DEVICE.compact ? 1150 : 1700),
+                count: DEVICE.reducedMotion ? 850 : (DEVICE.compact ? 1180 : 1780),
                 height: 24,
-                radius: 8
+                radius: 8,
+                garlandCount: DEVICE.compact ? 4 : 5,
+                garlandSegments: DEVICE.compact ? 72 : 104,
+                lightCount: DEVICE.reducedMotion ? 80 : (DEVICE.compact ? 120 : 172)
             },
             galaxy: {
                 dustCount: DEVICE.reducedMotion ? 1800 : (DEVICE.compact ? 2800 : 4200),
@@ -260,7 +280,7 @@
             render: {
                 pixelRatio: DEVICE.compact ? 1.15 : 1.5,
                 snowCount: DEVICE.reducedMotion ? 360 : (DEVICE.compact ? 620 : 900),
-                treeRotationSpeed: DEVICE.reducedMotion ? 0.035 : 0.11
+                treeRotationSpeed: DEVICE.reducedMotion ? 0.03 : 0.085
             }
         };
 
@@ -280,6 +300,10 @@
         let galaxyDust;
         let snowSystem;
         let caneTexture;
+        let garlandGroup = new THREE.Group();
+        let treeLightGroup = new THREE.Group();
+        let heroStar;
+        let heroStarLight;
         let clock = new THREE.Clock();
         let particleSystem = [];
         let photoParticles = [];
@@ -303,6 +327,8 @@
             createTextures();
             createSharedPhotoAssets();
             createTreeParticles();
+            createTreeGarlands();
+            createTreeLights();
             createGalaxyDust();
             createStarfield();
             createSnow();
@@ -349,6 +375,8 @@
 
             mainGroup = new THREE.Group();
             scene.add(mainGroup);
+            mainGroup.add(garlandGroup);
+            mainGroup.add(treeLightGroup);
             mainGroup.add(photoMeshGroup);
         }
 
@@ -381,12 +409,12 @@
             const bloom = new UnrealBloomPass(
                 new THREE.Vector2(window.innerWidth, window.innerHeight),
                 1.25,
-                0.35,
-                0.88
+                0.42,
+                0.76
             );
-            bloom.threshold = 0.88;
-            bloom.strength = 0.34;
-            bloom.radius = 0.42;
+            bloom.threshold = 0.76;
+            bloom.strength = 0.45;
+            bloom.radius = 0.52;
 
             composer = new EffectComposer(renderer);
             composer.addPass(renderScene);
@@ -454,6 +482,10 @@
                     (Math.random() - 0.5) * 1.8
                 );
                 this.scaleTarget = new THREE.Vector3(this.baseScale, this.baseScale, this.baseScale);
+                this.twinklePhase = Math.random() * Math.PI * 2;
+                this.twinkleSpeed = 0.55 + Math.random() * 0.75;
+                this.twinklePower = type === "BOX" ? 0.035 : 0.075;
+                this.floatPower = type === "BOX" ? 0.035 : 0.07;
                 this.orbit = {
                     radius: 12,
                     y: 0,
@@ -480,12 +512,14 @@
 
                 const h = CONFIG.tree.height;
                 const halfH = h / 2;
-                let t = Math.pow(Math.random(), 0.8);
+                let t = Math.pow(Math.random(), 0.72);
                 const y = (t * h) - halfH;
-                let rMax = CONFIG.tree.radius * (1 - t);
+                let rMax = CONFIG.tree.radius * Math.pow(1 - t, 0.92);
                 if (rMax < 0.5) rMax = 0.5;
-                const angle = t * 52 * Math.PI + Math.random() * Math.PI;
-                const r = rMax * (0.78 + Math.random() * 0.45);
+                const branchTier = 1 + Math.sin(t * Math.PI * 10) * 0.07;
+                const outerBias = Math.random() < 0.68 ? 0.48 + Math.random() * 0.48 : 0.92 + Math.random() * 0.26;
+                const angle = t * 58 * Math.PI + Math.random() * 0.9;
+                const r = rMax * outerBias * branchTier;
                 this.posTree.set(Math.cos(angle) * r, y, Math.sin(angle) * r);
 
                 const rScatter = this.isDust ? 18 + Math.random() * 24 : 8 + Math.random() * 12;
@@ -501,9 +535,9 @@
             update(dt) {
                 let target = this.posTree;
                 let scale = this.baseScale;
+                const time = clock.elapsedTime;
 
                 if (this.type === "PHOTO") {
-                    const time = clock.elapsedTime;
                     const angle = this.orbit.angle + time * this.orbit.speed;
                     const wave = Math.sin(time * 0.58 + this.orbit.phase);
                     const radius = this.orbit.radius + Math.sin(time * 0.22 + this.orbit.phase) * 1.1;
@@ -529,6 +563,12 @@
                     this.mesh.scale.lerp(this.scaleTarget.setScalar(scale), dt * 4);
                     return;
                 }
+
+                const flicker = Math.sin(time * this.twinkleSpeed + this.twinklePhase);
+                target = this.dynamicTarget.copy(this.posTree);
+                target.y += flicker * this.floatPower;
+                target.x += Math.sin(time * 0.24 + this.twinklePhase) * this.floatPower * 0.35;
+                scale = this.baseScale * (1 + flicker * this.twinklePower);
 
                 this.mesh.position.lerp(target, dt * 2.0);
                 this.mesh.rotation.x += this.spinSpeed.x * dt * 0.22;
@@ -605,7 +645,7 @@
                 particleSystem.push(new Particle(mesh, type));
             }
 
-            const starGeo = new THREE.OctahedronGeometry(1.25, 0);
+            const starGeo = new THREE.OctahedronGeometry(1.28, 0);
             const starMat = new THREE.MeshStandardMaterial({
                 color: 0xffe6a3,
                 emissive: 0xffaa00,
@@ -614,8 +654,92 @@
                 roughness: 0
             });
             const star = new THREE.Mesh(starGeo, starMat);
-            star.position.set(0, CONFIG.tree.height / 2 + 1.25, 0);
-            mainGroup.add(star);
+            const halo = new THREE.Mesh(
+                new THREE.OctahedronGeometry(1.95, 0),
+                new THREE.MeshBasicMaterial({
+                    color: 0xffd36a,
+                    transparent: true,
+                    opacity: 0.2,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                })
+            );
+            heroStarLight = new THREE.PointLight(0xffd36a, 2.4, 18);
+            heroStar = new THREE.Group();
+            heroStar.add(star, halo, heroStarLight);
+            heroStar.position.set(0, CONFIG.tree.height / 2 + 1.25, 0);
+            heroStar.userData.halo = halo;
+            mainGroup.add(heroStar);
+        }
+
+        function createTreeGarlands() {
+            const colors = [CONFIG.colors.gold, CONFIG.colors.red, CONFIG.colors.blue, CONFIG.colors.violet];
+            const h = CONFIG.tree.height;
+            const halfH = h / 2;
+
+            for (let band = 0; band < CONFIG.tree.garlandCount; band++) {
+                const points = [];
+                const start = 0.12 + band * 0.035;
+                const end = 0.9 - band * 0.018;
+                const turns = 1.35 + band * 0.12;
+
+                for (let i = 0; i <= CONFIG.tree.garlandSegments; i++) {
+                    const progress = i / CONFIG.tree.garlandSegments;
+                    const t = start + (end - start) * progress;
+                    const radius = CONFIG.tree.radius * Math.pow(1 - t, 0.92) * 1.06 + 0.08;
+                    const angle = (progress * turns + band * 0.24) * Math.PI * 2 + t * Math.PI * 1.4;
+                    points.push(new THREE.Vector3(
+                        Math.cos(angle) * radius,
+                        t * h - halfH,
+                        Math.sin(angle) * radius
+                    ));
+                }
+
+                const curve = new THREE.CatmullRomCurve3(points);
+                const geo = new THREE.TubeGeometry(curve, CONFIG.tree.garlandSegments, DEVICE.compact ? 0.026 : 0.034, 6, false);
+                const mat = new THREE.MeshBasicMaterial({
+                    color: colors[band % colors.length],
+                    transparent: true,
+                    opacity: 0.54,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                });
+                const ribbon = new THREE.Mesh(geo, mat);
+                ribbon.userData.phase = band * 0.9;
+                garlandGroup.add(ribbon);
+            }
+        }
+
+        function createTreeLights() {
+            const bulbGeo = new THREE.SphereGeometry(0.115, 12, 12);
+            const palette = [0xfff0aa, 0xff646f, 0x8db7ff, 0xf4d478];
+            const materials = palette.map((color) => new THREE.MeshStandardMaterial({
+                color,
+                emissive: color,
+                emissiveIntensity: 1.35,
+                roughness: 0.18,
+                metalness: 0.15
+            }));
+            const h = CONFIG.tree.height;
+            const halfH = h / 2;
+
+            for (let i = 0; i < CONFIG.tree.lightCount; i++) {
+                const progress = i / Math.max(1, CONFIG.tree.lightCount - 1);
+                const t = 0.08 + progress * 0.84;
+                const radius = CONFIG.tree.radius * Math.pow(1 - t, 0.92) * (1.01 + Math.sin(i * 1.7) * 0.035);
+                const angle = t * 56 * Math.PI + i * 0.42;
+                const bulb = new THREE.Mesh(bulbGeo, materials[i % materials.length]);
+                const scale = 0.72 + (i % 5) * 0.07;
+                bulb.position.set(
+                    Math.cos(angle) * radius,
+                    t * h - halfH,
+                    Math.sin(angle) * radius
+                );
+                bulb.scale.setScalar(scale);
+                bulb.userData.baseScale = scale;
+                bulb.userData.phase = i * 0.37;
+                treeLightGroup.add(bulb);
+            }
         }
 
         function createGalaxyDust() {
@@ -691,7 +815,7 @@
                     (Math.random() - 0.5) * 86 + 14,
                     (Math.random() - 0.5) * 112
                 );
-                velocities.push(Math.random() * 0.12 + 0.055);
+                velocities.push(Math.random() * 0.1 + 0.045);
             }
 
             const geo = new THREE.BufferGeometry();
@@ -711,9 +835,9 @@
             const mat = new THREE.PointsMaterial({
                 color: 0xffffff,
                 map: new THREE.CanvasTexture(canvas),
-                size: 0.42,
+                size: 0.38,
                 transparent: true,
-                opacity: 0.42,
+                opacity: 0.38,
                 depthWrite: false,
                 blending: THREE.AdditiveBlending
             });
@@ -975,7 +1099,7 @@
 
         function updateCounter(loaded, total) {
             counterEl.textContent = `${loaded} / ${total}`;
-            loaderTextEl.textContent = `Loading Memories ${loaded}/${total}`;
+            loaderTextEl.textContent = `载入回忆 ${loaded}/${total}`;
         }
 
         function hideLoader() {
@@ -992,6 +1116,28 @@
             const elapsed = clock.elapsedTime;
 
             mainGroup.rotation.y += dt * CONFIG.render.treeRotationSpeed;
+            mainGroup.rotation.z = Math.sin(elapsed * 0.18) * 0.014;
+            mainGroup.position.y = Math.sin(elapsed * 0.28) * 0.12;
+
+            if (heroStar) {
+                const pulse = 1 + Math.sin(elapsed * 2.4) * 0.075;
+                heroStar.rotation.y += dt * 0.72;
+                heroStar.rotation.z -= dt * 0.36;
+                heroStar.scale.setScalar(pulse);
+                heroStar.userData.halo.scale.setScalar(1.05 + Math.sin(elapsed * 1.9) * 0.12);
+                heroStar.userData.halo.material.opacity = 0.16 + Math.sin(elapsed * 2.1) * 0.055;
+                heroStarLight.intensity = 2.0 + Math.sin(elapsed * 2.2) * 0.5;
+            }
+
+            for (const ribbon of garlandGroup.children) {
+                ribbon.material.opacity = 0.48 + Math.sin(elapsed * 0.85 + ribbon.userData.phase) * 0.12;
+            }
+
+            for (const bulb of treeLightGroup.children) {
+                const pulse = 0.72 + Math.sin(elapsed * 1.35 + bulb.userData.phase) * 0.28;
+                bulb.scale.setScalar(bulb.userData.baseScale * pulse);
+            }
+
             if (galaxyDust) {
                 galaxyDust.rotation.y -= dt * 0.055;
                 galaxyDust.rotation.x = Math.sin(elapsed * 0.12) * 0.045;
@@ -1001,6 +1147,7 @@
                 const positions = snowSystem.geometry.attributes.position.array;
                 const velocities = snowSystem.geometry.attributes.velocity.array;
                 for (let i = 0; i < velocities.length; i++) {
+                    positions[i * 3] += Math.sin(elapsed * 0.55 + i * 0.37) * 0.0025;
                     positions[i * 3 + 1] -= velocities[i];
                     if (positions[i * 3 + 1] < -22) {
                         positions[i * 3 + 1] = 42;
